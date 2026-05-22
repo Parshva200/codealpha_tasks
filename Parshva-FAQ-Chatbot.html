@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Parshva | FAQ Chatbot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f0f5;
+      --surface: #ffffff;
+      --surface2: #f7f7fc;
+      --border: #e2e2ec;
+      --accent: #4f46e5;
+      --accent-light: #eef2ff;
+      --accent2: #e0e7ff;
+      --text: #1a1a2e;
+      --muted: #8888aa;
+      --user-bubble: #4f46e5;
+      --bot-bubble: #ffffff;
+      --success: #10b981;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Decorative grid bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,70,229,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,70,229,0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 20px rgba(0,0,0,0.06);
+    }
+
+    .header-left { display: flex; align-items: center; gap: 14px; }
+
+    .bot-avatar {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .bot-info h2 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .bot-info .status {
+      font-size: 0.7rem;
+      color: var(--success);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success);
+    }
+
+    .header-right { display: flex; gap: 8px; }
+
+    .btn-sm {
+      background: var(--accent-light);
+      border: none;
+      color: var(--accent);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-sm:hover { background: var(--accent2); }
+
+    .app-body {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      max-width: 1200px;
+      width: 100%;
+      margin: 32px auto;
+      gap: 20px;
+      padding: 0 24px;
+    }
+
+    /* Sidebar: FAQ Manager */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .faq-count {
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .faq-list {
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .faq-entry {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .faq-entry:last-child { border-bottom: none; }
+    .faq-entry:hover { background: var(--surface2); }
+    .faq-entry.active { background: var(--accent-light); }
+
+    .faq-q {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .faq-a {
+      font-size: 0.72rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .add-faq-form {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    input[type="text"], textarea.small {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.8rem;
+      color: var(--text);
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, textarea.small:focus { border-color: var(--accent); }
+    textarea.small { resize: none; height: 60px; }
+
+    .btn-add {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 9px;
+      border-radius: 8px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-add:hover { opacity: 0.88; }
+
+    /* Topic quick-select */
+    .topic-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 12px 20px;
+    }
+    .topic-pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .topic-pill:hover, .topic-pill.active {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Chat */
+    .chat-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .chat-window {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px 16px 0 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 560px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+    }
+
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      animation: msgIn 0.25s ease;
+    }
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 30px; height: 30px; border-radius: 10px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem;
+    }
+    .msg-avatar.bot {
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+    }
+    .msg-avatar.user {
+      background: #f0f0f5;
+      border: 1px solid var(--border);
+    }
+
+    .bubble {
+      max-width: 72%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+    .message.bot .bubble {
+      background: var(--bot-bubble);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+      color: var(--text);
+      box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+    }
+    .message.user .bubble {
+      background: var(--user-bubble);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .bubble .match-info {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-family: 'Fira Code', monospace;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .match-score {
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-weight: 600;
+    }
+
+    .typing-indicator {
+      display: flex; align-items: center; gap: 4px;
+      padding: 12px 16px;
+      background: var(--bot-bubble);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      width: fit-content;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+    }
+    .typing-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--muted);
+      animation: typingBounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)}
+    }
+
+    /* Chat input */
+    .chat-input-area {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 16px 16px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.88rem;
+      color: var(--text);
+      outline: none;
+      resize: none;
+      max-height: 120px;
+      transition: border-color 0.2s;
+      line-height: 1.5;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+
+    .btn-send {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-send:hover { opacity: 0.88; transform: scale(1.05); }
+    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* Suggested questions */
+    .suggested-qs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 20px 0;
+    }
+    .suggest-btn {
+      background: var(--accent-light);
+      border: 1px solid var(--accent2);
+      color: var(--accent);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .suggest-btn:hover { background: var(--accent); color: #fff; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    @media (max-width: 768px) {
+      .app-body { grid-template-columns: 1fr; }
+      .sidebar { order: 2; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="bot-avatar">🤖</div>
+    <div class="bot-info">
+      <h2>Parshva FAQ Bot</h2>
+      <div class="status"><span class="status-dot"></span> Online · AI Powered</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn-sm" id="exportBtn">↓ Export Chat</button>
+    <button class="btn-sm" id="resetBtn">↺ Reset</button>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Topic Quick Select -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Topic</span>
+      </div>
+      <div class="topic-pills" id="topicPills"></div>
+    </div>
+
+    <!-- FAQ Manager -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">FAQ Database</span>
+        <span class="faq-count" id="faqCount">0</span>
+      </div>
+      <div class="faq-list" id="faqList"></div>
+      <div class="add-faq-form">
+        <input type="text" id="newQ" placeholder="New question…"/>
+        <textarea class="small" id="newA" placeholder="Answer…"></textarea>
+        <button class="btn-add" id="addFaqBtn">+ Add FAQ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-wrapper">
+    <div class="chat-window">
+      <div class="messages-area" id="messagesArea"></div>
+    </div>
+    <div class="suggested-qs" id="suggestedQs"></div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chatInput" placeholder="Ask a question…" rows="1"></textarea>
+      <button class="btn-send" id="sendBtn">→</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── FAQ Database ─────────────────────────────────────────────
+const DEFAULT_FAQS = [
+  { q: "What are your business hours?", a: "We are open Monday to Friday, 9 AM to 6 PM IST. On weekends we offer limited support via email." },
+  { q: "How do I reset my password?", a: "Click 'Forgot Password' on the login page, enter your email, and follow the reset link sent to your inbox. The link expires in 30 minutes." },
+  { q: "What payment methods do you accept?", a: "We accept all major credit/debit cards (Visa, Mastercard, Rupay), UPI, net banking, and digital wallets like Paytm and PhonePe." },
+  { q: "How long does shipping take?", a: "Standard shipping takes 5–7 business days. Express shipping (1–2 days) is available at checkout for most pin codes." },
+  { q: "Can I return or refund my order?", a: "Yes, we offer a 30-day return policy. Items must be unused and in original packaging. Refunds are processed within 7 business days." },
+  { q: "How do I track my order?", a: "You will receive a tracking link via SMS and email once your order is dispatched. You can also track it in the 'My Orders' section." },
+  { q: "Do you offer customer support?", a: "Yes! You can reach us via live chat, email at support@example.com, or call our helpline at 1800-XXX-XXXX." },
+  { q: "Is my data safe with you?", a: "Absolutely. We use 256-bit SSL encryption and never sell your data to third parties. Read our Privacy Policy for full details." },
+];
+
+const TOPICS = [
+  { name: "All", filter: null },
+  { name: "Account", filter: ["password", "login", "account", "data", "safe"] },
+  { name: "Orders", filter: ["order", "shipping", "track", "return", "refund"] },
+  { name: "Payments", filter: ["payment", "pay", "methods"] },
+  { name: "Support", filter: ["support", "hours", "contact"] },
+];
+
+let faqs = [...DEFAULT_FAQS];
+let messages = [];
+let activeTopic = null;
+
+// ─── NLP: Cosine Similarity ────────────────────────────────────
+function tokenize(text) {
+  return text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+}
+
+function cosineSimilarity(a, b) {
+  const setA = tokenize(a), setB = tokenize(b);
+  const all = [...new Set([...setA, ...setB])];
+  const vec = (tokens) => all.map(w => tokens.filter(t => t === w).length);
+  const vA = vec(setA), vB = vec(setB);
+  const dot = vA.reduce((s, v, i) => s + v * vB[i], 0);
+  const magA = Math.sqrt(vA.reduce((s, v) => s + v * v, 0));
+  const magB = Math.sqrt(vB.reduce((s, v) => s + v * v, 0));
+  return (magA && magB) ? dot / (magA * magB) : 0;
+}
+
+function findBestMatch(query, faqSet) {
+  let best = null, bestScore = 0;
+  for (const faq of faqSet) {
+    const score = cosineSimilarity(query, faq.q);
+    if (score > bestScore) { bestScore = score; best = faq; }
+  }
+  return { faq: best, score: bestScore };
+}
+
+// ─── Render ────────────────────────────────────────────────────
+function renderFAQs() {
+  const list = document.getElementById('faqList');
+  const filtered = activeTopic
+    ? faqs.filter(f => activeTopic.some(kw => f.q.toLowerCase().includes(kw)))
+    : faqs;
+
+  list.innerHTML = filtered.map((f, i) => `
+    <div class="faq-entry" data-i="${i}">
+      <div class="faq-q">${f.q}</div>
+      <div class="faq-a">${f.a}</div>
+    </div>
+  `).join('');
+  document.getElementById('faqCount').textContent = faqs.length;
+}
+
+function renderTopics() {
+  const container = document.getElementById('topicPills');
+  container.innerHTML = TOPICS.map((t, i) => `
+    <button class="topic-pill ${!activeTopic && i === 0 ? 'active' : ''}" data-i="${i}">${t.name}</button>
+  `).join('');
+
+  container.querySelectorAll('.topic-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.topic-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeTopic = TOPICS[btn.dataset.i].filter;
+      renderFAQs();
+      renderSuggestions();
+    });
+  });
+}
+
+function renderMessages() {
+  const area = document.getElementById('messagesArea');
+  area.innerHTML = messages.map(m => `
+    <div class="message ${m.role}">
+      <div class="msg-avatar ${m.role}">${m.role === 'bot' ? '🤖' : '🧑'}</div>
+      <div class="bubble">
+        ${m.text}
+        ${m.matchInfo ? `<div class="match-info"><span class="match-score">${(m.matchInfo.score * 100).toFixed(0)}% match</span> ↔ "${m.matchInfo.q}"</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+  area.scrollTop = area.scrollHeight;
+}
+
+function addMessage(role, text, matchInfo = null) {
+  messages.push({ role, text, matchInfo });
+  renderMessages();
+}
+
+function showTyping() {
+  const area = document.getElementById('messagesArea');
+  const el = document.createElement('div');
+  el.className = 'message bot';
+  el.id = 'typing';
+  el.innerHTML = `
+    <div class="msg-avatar bot">🤖</div>
+    <div class="typing-indicator">
+      <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+    </div>`;
+  area.appendChild(el);
+  area.scrollTop = area.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing');
+  if (el) el.remove();
+}
+
+function renderSuggestions() {
+  const container = document.getElementById('suggestedQs');
+  const pool = activeTopic
+    ? faqs.filter(f => activeTopic.some(kw => f.q.toLowerCase().includes(kw)))
+    : faqs;
+  const pick = pool.slice(0, 4);
+  container.innerHTML = pick.map(f => `
+    <button class="suggest-btn">${f.q}</button>
+  `).join('');
+  container.querySelectorAll('.suggest-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('chatInput').value = btn.textContent;
+      handleSend();
+    });
+  });
+}
+
+// ─── Send Logic ────────────────────────────────────────────────
+async function handleSend() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  addMessage('user', text);
+
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+  showTyping();
+
+  // 1. Find best FAQ match locally
+  const { faq: matched, score } = findBestMatch(text, faqs);
+
+  // 2. Build Claude prompt
+  const faqContext = faqs.map((f, i) => `Q${i+1}: ${f.q}\nA${i+1}: ${f.a}`).join('\n\n');
+  const prompt = `You are a helpful FAQ chatbot. Below is your FAQ database:\n\n${faqContext}\n\nUser question: "${text}"\n\nBest local match (cosine similarity ${(score*100).toFixed(0)}%): "${matched ? matched.q : 'none'}"\n\nAnswer the user's question using the FAQ data. Be conversational, friendly, and concise. If no FAQ matches well (score < 30%), politely say you don't have that information and suggest contacting support. Do NOT mention scores or internal details.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    hideTyping();
+
+    if (data.content && data.content[0]) {
+      const reply = data.content[0].text.trim();
+      addMessage('bot', reply, score > 0.1 ? { score, q: matched.q } : null);
+    } else {
+      throw new Error();
+    }
+  } catch {
+    hideTyping();
+    addMessage('bot', '⚠ Sorry, I encountered an error. Please try again.');
+  }
+
+  sendBtn.disabled = false;
+  renderSuggestions();
+}
+
+// ─── Events ───────────────────────────────────────────────────
+document.getElementById('sendBtn').addEventListener('click', handleSend);
+
+const chatInput = document.getElementById('chatInput');
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+});
+chatInput.addEventListener('input', () => {
+  chatInput.style.height = 'auto';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+});
+
+document.getElementById('addFaqBtn').addEventListener('click', () => {
+  const q = document.getElementById('newQ').value.trim();
+  const a = document.getElementById('newA').value.trim();
+  if (!q || !a) { alert('Please fill in both question and answer.'); return; }
+  faqs.push({ q, a });
+  document.getElementById('newQ').value = '';
+  document.getElementById('newA').value = '';
+  renderFAQs();
+  renderSuggestions();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  messages = [];
+  renderMessages();
+  addMessage('bot', '👋 Hello! I\'m the Parshva FAQ Bot. Ask me anything or pick a topic from the sidebar!');
+  renderSuggestions();
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const text = messages.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n\n');
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'parshva-faq-chat.txt';
+  a.click();
+});
+
+// ─── Init ──────────────────────────────────────────────────────
+renderTopics();
+renderFAQs();
+addMessage('bot', '👋 Hello! I\'m the <strong>Parshva FAQ Bot</strong>. Ask me anything — I\'ll match your question to the best answer using NLP. You can also add your own FAQs in the sidebar!');
+renderSuggestions();
+</script>
+</body>
+</html>
