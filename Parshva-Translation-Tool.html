@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Parshva | Language Translation Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --surface2: #1c1c26;
+      --border: #2a2a3a;
+      --accent: #7c6aff;
+      --accent2: #ff6ab0;
+      --text: #e8e8f0;
+      --muted: #6a6a88;
+      --success: #4fffb0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background blobs */
+    body::before {
+      content: '';
+      position: fixed;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,106,255,0.12) 0%, transparent 70%);
+      top: -200px; left: -100px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,106,176,0.10) 0%, transparent 70%);
+      bottom: -100px; right: -100px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative; z-index: 1;
+      padding: 28px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.08em;
+    }
+
+    main {
+      position: relative; z-index: 1;
+      flex: 1;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+    h1 span { 
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 48px;
+      letter-spacing: 0.04em;
+    }
+
+    .translator-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0;
+      align-items: start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    }
+
+    .panel {
+      padding: 28px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .panel-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236a6a88' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+    select:hover, select:focus { border-color: var(--accent); }
+
+    textarea {
+      width: 100%;
+      min-height: 240px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      line-height: 1.7;
+      resize: vertical;
+      padding: 0;
+    }
+    textarea::placeholder { color: var(--muted); }
+
+    .panel-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .char-count {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .btn-group { display: flex; gap: 8px; }
+
+    button {
+      cursor: pointer;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      border: none;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .btn-icon {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .btn-icon:hover { border-color: var(--accent); color: var(--text); }
+    .btn-icon.copied { border-color: var(--success); color: var(--success); }
+
+    .divider {
+      width: 1px;
+      background: var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 0;
+      gap: 12px;
+    }
+
+    .swap-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .swap-btn:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      transform: rotate(180deg);
+    }
+
+    .translate-bar {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-translate {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      padding: 14px 36px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-translate::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background 0.2s;
+    }
+    .btn-translate:hover::before { background: rgba(255,255,255,0.1); }
+    .btn-translate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-clear {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+    }
+    .btn-clear:hover { border-color: var(--accent2); color: var(--text); }
+
+    .status-pill {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      padding: 6px 14px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+      display: none;
+    }
+    .status-pill.loading {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(124,106,255,0.15);
+      border: 1px solid rgba(124,106,255,0.3);
+      color: var(--accent);
+    }
+    .status-pill.error {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,100,100,0.12);
+      border: 1px solid rgba(255,100,100,0.3);
+      color: #ff7a7a;
+    }
+
+    .dot-pulse {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .output-panel {
+      background: var(--surface2);
+      position: relative;
+    }
+
+    .output-text {
+      min-height: 240px;
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      line-height: 1.7;
+      color: var(--text);
+      padding: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .output-text.placeholder { color: var(--muted); font-style: italic; }
+
+    .tts-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tts-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    .tts-btn.speaking { border-color: var(--accent2); color: var(--accent2); }
+
+    /* History */
+    .history-section {
+      margin-top: 48px;
+    }
+    .history-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .history-title::after {
+      content: ''; flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .history-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+    }
+    .history-item:hover { border-color: var(--accent); }
+    .history-item .lang-tag {
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .history-item .text-preview {
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-arrow { color: var(--accent); font-size: 0.9rem; text-align: center; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    @media (max-width: 700px) {
+      .translator-grid { grid-template-columns: 1fr; }
+      .divider { width: 100%; height: 1px; flex-direction: row; padding: 0 28px; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">Parshva · Translate</div>
+  <div class="badge">AI-Powered · v1.0</div>
+</header>
+
+<main>
+  <h1>Translate <span>Anything</span>,<br>Instantly.</h1>
+  <p class="subtitle">// powered by claude ai · supports 20+ languages</p>
+
+  <div class="translator-grid">
+    <!-- Source Panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-label">Source</span>
+        <select id="sourceLang">
+          <option value="auto">Auto Detect</option>
+          <option value="English">English</option>
+          <option value="Hindi">Hindi</option>
+          <option value="Spanish">Spanish</option>
+          <option value="French">French</option>
+          <option value="German">German</option>
+          <option value="Chinese">Chinese (Simplified)</option>
+          <option value="Japanese">Japanese</option>
+          <option value="Korean">Korean</option>
+          <option value="Arabic">Arabic</option>
+          <option value="Portuguese">Portuguese</option>
+          <option value="Russian">Russian</option>
+          <option value="Italian">Italian</option>
+          <option value="Dutch">Dutch</option>
+          <option value="Turkish">Turkish</option>
+          <option value="Polish">Polish</option>
+          <option value="Swedish">Swedish</option>
+          <option value="Gujarati">Gujarati</option>
+          <option value="Marathi">Marathi</option>
+          <option value="Bengali">Bengali</option>
+          <option value="Tamil">Tamil</option>
+        </select>
+      </div>
+      <textarea id="sourceText" placeholder="Enter text to translate…" maxlength="5000"></textarea>
+      <div class="panel-footer">
+        <span class="char-count" id="charCount">0 / 5000</span>
+        <div class="btn-group">
+          <button class="btn-icon" id="pasteBtn">⌘ Paste</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider with swap -->
+    <div class="divider">
+      <button class="swap-btn" id="swapBtn" title="Swap languages">⇄</button>
+    </div>
+
+    <!-- Target Panel -->
+    <div class="panel output-panel">
+      <div class="panel-header">
+        <span class="panel-label">Translation</span>
+        <select id="targetLang">
+          <option value="Hindi">Hindi</option>
+          <option value="English" selected>English</option>
+          <option value="Spanish">Spanish</option>
+          <option value="French">French</option>
+          <option value="German">German</option>
+          <option value="Chinese">Chinese (Simplified)</option>
+          <option value="Japanese">Japanese</option>
+          <option value="Korean">Korean</option>
+          <option value="Arabic">Arabic</option>
+          <option value="Portuguese">Portuguese</option>
+          <option value="Russian">Russian</option>
+          <option value="Italian">Italian</option>
+          <option value="Dutch">Dutch</option>
+          <option value="Turkish">Turkish</option>
+          <option value="Polish">Polish</option>
+          <option value="Swedish">Swedish</option>
+          <option value="Gujarati">Gujarati</option>
+          <option value="Marathi">Marathi</option>
+          <option value="Bengali">Bengali</option>
+          <option value="Tamil">Tamil</option>
+        </select>
+      </div>
+      <div class="output-text placeholder" id="outputText">Translation will appear here…</div>
+      <div class="panel-footer">
+        <button class="btn-icon tts-btn" id="ttsBtn">🔊 Listen</button>
+        <div class="btn-group">
+          <button class="btn-icon" id="copyBtn">⎘ Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="translate-bar">
+    <button class="btn-translate" id="translateBtn">Translate →</button>
+    <button class="btn-clear" id="clearBtn">Clear</button>
+    <span class="status-pill" id="statusPill">
+      <span class="dot-pulse"></span>
+      <span id="statusText">Translating…</span>
+    </span>
+  </div>
+
+  <!-- History -->
+  <div class="history-section" id="historySection" style="display:none">
+    <div class="history-title">Recent Translations</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</main>
+
+<script>
+  const sourceText = document.getElementById('sourceText');
+  const outputText = document.getElementById('outputText');
+  const sourceLang = document.getElementById('sourceLang');
+  const targetLang = document.getElementById('targetLang');
+  const translateBtn = document.getElementById('translateBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const pasteBtn = document.getElementById('pasteBtn');
+  const swapBtn = document.getElementById('swapBtn');
+  const ttsBtn = document.getElementById('ttsBtn');
+  const charCount = document.getElementById('charCount');
+  const statusPill = document.getElementById('statusPill');
+  const statusText = document.getElementById('statusText');
+  const historySection = document.getElementById('historySection');
+  const historyList = document.getElementById('historyList');
+
+  let history = [];
+  let speaking = false;
+
+  sourceText.addEventListener('input', () => {
+    charCount.textContent = `${sourceText.value.length} / 5000`;
+  });
+
+  pasteBtn.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      sourceText.value = text;
+      charCount.textContent = `${text.length} / 5000`;
+    } catch { alert('Clipboard access denied.'); }
+  });
+
+  swapBtn.addEventListener('click', () => {
+    const sl = sourceLang.value;
+    const tl = targetLang.value;
+    const currentOutput = outputText.classList.contains('placeholder') ? '' : outputText.textContent;
+    if (sl !== 'auto') {
+      const slOpt = [...sourceLang.options].find(o => o.value === tl);
+      if (slOpt) sourceLang.value = tl;
+      const tlOpt = [...targetLang.options].find(o => o.value === sl);
+      if (tlOpt) targetLang.value = sl;
+    }
+    if (currentOutput) {
+      sourceText.value = currentOutput;
+      charCount.textContent = `${currentOutput.length} / 5000`;
+      outputText.textContent = 'Translation will appear here…';
+      outputText.classList.add('placeholder');
+    }
+  });
+
+  translateBtn.addEventListener('click', translate);
+
+  async function translate() {
+    const text = sourceText.value.trim();
+    if (!text) { alert('Please enter some text to translate.'); return; }
+    const src = sourceLang.value;
+    const tgt = targetLang.value;
+
+    translateBtn.disabled = true;
+    statusPill.className = 'status-pill loading';
+    statusText.textContent = 'Translating…';
+    outputText.textContent = '';
+    outputText.classList.remove('placeholder');
+
+    const prompt = src === 'auto'
+      ? `Translate the following text to ${tgt}. Respond with ONLY the translated text, no explanations, no notes:\n\n${text}`
+      : `Translate the following text from ${src} to ${tgt}. Respond with ONLY the translated text, no explanations, no notes:\n\n${text}`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await res.json();
+      if (data.content && data.content[0]) {
+        const translated = data.content[0].text.trim();
+        outputText.textContent = translated;
+        outputText.classList.remove('placeholder');
+        statusPill.className = 'status-pill';
+        addHistory(text, translated, src === 'auto' ? 'Auto' : src, tgt);
+      } else {
+        throw new Error('No response');
+      }
+    } catch (e) {
+      statusPill.className = 'status-pill error';
+      statusText.textContent = 'Translation failed';
+      outputText.textContent = '⚠ Could not translate. Please try again.';
+      outputText.classList.add('placeholder');
+    } finally {
+      translateBtn.disabled = false;
+    }
+  }
+
+  copyBtn.addEventListener('click', () => {
+    const t = outputText.textContent;
+    if (!t || outputText.classList.contains('placeholder')) return;
+    navigator.clipboard.writeText(t).then(() => {
+      copyBtn.textContent = '✓ Copied';
+      copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = '⎘ Copy'; copyBtn.classList.remove('copied'); }, 2000);
+    });
+  });
+
+  clearBtn.addEventListener('click', () => {
+    sourceText.value = '';
+    charCount.textContent = '0 / 5000';
+    outputText.textContent = 'Translation will appear here…';
+    outputText.classList.add('placeholder');
+    statusPill.className = 'status-pill';
+  });
+
+  ttsBtn.addEventListener('click', () => {
+    const t = outputText.textContent;
+    if (!t || outputText.classList.contains('placeholder')) return;
+    if (speaking) {
+      speechSynthesis.cancel();
+      speaking = false;
+      ttsBtn.classList.remove('speaking');
+      ttsBtn.textContent = '🔊 Listen';
+      return;
+    }
+    const utter = new SpeechSynthesisUtterance(t);
+    speaking = true;
+    ttsBtn.classList.add('speaking');
+    ttsBtn.textContent = '⏹ Stop';
+    utter.onend = () => {
+      speaking = false;
+      ttsBtn.classList.remove('speaking');
+      ttsBtn.textContent = '🔊 Listen';
+    };
+    speechSynthesis.speak(utter);
+  });
+
+  function addHistory(src, tgt, srcLang, tgtLang) {
+    history.unshift({ src, tgt, srcLang, tgtLang });
+    if (history.length > 10) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    if (history.length === 0) { historySection.style.display = 'none'; return; }
+    historySection.style.display = 'block';
+    historyList.innerHTML = history.map((h, i) => `
+      <div class="history-item" data-i="${i}">
+        <div>
+          <div class="lang-tag">${h.srcLang}</div>
+          <div class="text-preview">${h.src.substring(0, 60)}${h.src.length > 60 ? '…' : ''}</div>
+        </div>
+        <div class="history-arrow">→</div>
+        <div>
+          <div class="lang-tag">${h.tgtLang}</div>
+          <div class="text-preview">${h.tgt.substring(0, 60)}${h.tgt.length > 60 ? '…' : ''}</div>
+        </div>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.history-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const h = history[el.dataset.i];
+        sourceText.value = h.src;
+        charCount.textContent = `${h.src.length} / 5000`;
+        outputText.textContent = h.tgt;
+        outputText.classList.remove('placeholder');
+      });
+    });
+  }
+
+  // Allow Ctrl+Enter to translate
+  sourceText.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') translate();
+  });
+</script>
+</body>
+</html>
